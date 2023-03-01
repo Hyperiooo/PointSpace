@@ -19,6 +19,17 @@ async function loadSVG(url) {
 function parseSVG(svg) {
 	var children = svg.children;
 	var parsed = [];
+	var metadata = new SVGMetadata(svg);
+	parsed.push(metadata);
+	document
+		.getElementById("mainArtboard")
+		.setAttributeNS(null, "width", parsed[0].width || 100);
+	document
+		.getElementById("mainArtboard")
+		.setAttributeNS(null, "height", parsed[0].height || 100);
+	document
+		.getElementById("mainArtboard")
+		.setAttributeNS(null, "viewBox", parsed[0].viewBox);
 	for (var i = 0; i < children.length; i++) {
 		var child = children[i];
 		if (child.tagName === "path") {
@@ -37,7 +48,30 @@ function parseSVG(svg) {
 			parsed.push(new Polygon(child));
 		}
 	}
+	parsed.forEach((e) => {
+		if (e.render) e.render();
+	});
 	return parsed;
+}
+
+class SVGMetadata {
+	constructor(svg) {
+		this.svg = svg;
+		this.width = svg.getAttribute("width");
+		this.height = svg.getAttribute("height");
+		this.viewBox = svg.getAttribute("viewBox");
+		this.preserveAspectRatio = svg.getAttribute("preserveAspectRatio");
+		this.version = svg.getAttribute("version");
+		this.baseProfile = svg.getAttribute("baseProfile");
+		this.xmlns = svg.getAttribute("xmlns");
+		this.xmlnsXlink = svg.getAttribute("xmlns:xlink");
+		this.xmlnsSvg = svg.getAttribute("xmlns:svg");
+		this.xmlnsSodipodi = svg.getAttribute("xmlns:sodipodi");
+		this.xmlnsInkscape = svg.getAttribute("xmlns:inkscape");
+		this.id = svg.getAttribute("id");
+		this.style = svg.getAttribute("style");
+		this.class = svg.getAttribute("class");
+	}
 }
 
 //class which parses path from dom element
@@ -60,6 +94,19 @@ class Path {
 		this.style = path.getAttribute("style");
 		this.id = path.getAttribute("id");
 		this.class = path.getAttribute("class");
+		//add event listener for hover on path
+		this.path.addEventListener("mouseover", (e) => {
+			this.path.classList.add("svgHover");
+		})
+		this.path.addEventListener("mouseout", (e) => {
+			this.path.classList.remove("svgHover");
+		})
+	}
+	render() {
+		if (document.getElementById("mainArtboard").contains(this.path)) {
+			document.getElementById("mainArtboard").removeChild(this.path);
+		}
+		document.getElementById("mainArtboard").appendChild(this.path);
 	}
 }
 //class which parses circle from dom element
@@ -366,102 +413,144 @@ class EllipticalArc {
 		this.y = y;
 	}
 }
+
+function isUppercase(command) {
+	return command === command.toUpperCase();
+}
 //converts array of svg path commands from relative to absolute based on the first command given, which can be assumed as a moveto command which is always relative
 function convertToAbsolute(commands) {
-	let homeX = commands[0][1];
-	let homeY = commands[0][2];
+	let homeX = parseFloat(commands[0][1]);
+	let homeY = parseFloat(commands[0][2]);
 	let adjustedCommands = [];
-	adjustedCommands.push(["M", commands[0][1], commands[0][2]]);
+	adjustedCommands.push([
+		"M",
+		parseFloat(commands[0][1]),
+		parseFloat(commands[0][2]),
+	]);
 	for (let i = 1; i < commands.length; i++) {
 		let command = commands[i];
 		let type = command[0];
-		if (type === "m") {
-			homeX = homeX + parseFloat(command[1]);
-			homeY = homeY + parseFloat(command[2]);
-			adjustedCommands.push(["L", homeX, homeY]);
-		} else if (type === "l") {
-			homeX = homeX + parseFloat(command[1]);
-			homeY = homeY + parseFloat(command[2]);
-			adjustedCommands.push(["L", homeX, homeY]);
-		} else if (type === "h") {
-			homeX = homeX + parseFloat(command[1]);
-			adjustedCommands.push(["L", homeX, homeY]);
-		} else if (type === "v") {
-			homeY = homeY + parseFloat(command[1]);
-			adjustedCommands.push(["L", homeX, homeY]);
-		} else if (type === "c") {
-			homeX = homeX + parseFloat(command[5]);
-			homeY = homeY + parseFloat(command[6]);
-			adjustedCommands.push([
-				"C",
-				homeX + parseFloat(command[1]),
-				homeY + parseFloat(command[2]),
-				homeX + parseFloat(command[3]),
-				homeY + parseFloat(command[4]),
-				homeX,
-				homeY,
-			]);
-		} else if (type === "s") {
-			homeX = homeX + parseFloat(command[3]);
-			homeY = homeY + parseFloat(command[4]);
-			adjustedCommands.push([
-				"C",
-				homeX + parseFloat(command[1]),
-				homeY + parseFloat(command[2]),
-				homeX,
-				homeY,
-				homeX,
-				homeY,
-			]);
-		} else if (type === "q") {
-			homeX = homeX + parseFloat(command[3]);
-			homeY = homeY + parseFloat(command[4]);
-			adjustedCommands.push([
-				"Q",
-				homeX + parseFloat(command[1]),
-				homeY + parseFloat(command[2]),
-				homeX,
-				homeY,
-			]);
-		} else if (type === "t") {
-			homeX = homeX + parseFloat(command[1]);
-			homeY = homeY + parseFloat(command[2]);
-			adjustedCommands.push(["Q", homeX, homeY, homeX, homeY]);
-		} else if (type === "a") {
-			homeX = homeX + parseFloat(command[6]);
-			homeY = homeY + parseFloat(command[7]);
-			adjustedCommands.push([
-				"A",
-				parseFloat(command[1]),
-				parseFloat(command[2]),
-				parseFloat(command[3]),
-				parseFloat(command[4]),
-				parseFloat(command[5]),
-				homeX,
-				homeY,
-			]);
-		} else if (type === "z") {
-			homeX = commands[0][1];
-			homeY = commands[0][2];
-			adjustedCommands.push(["L", homeX, homeY]);
+		let x = parseFloat(command[1]);
+		let y = parseFloat(command[2]);
+		let x1 = parseFloat(command[1]);
+		let y1 = parseFloat(command[2]);
+		let x2 = parseFloat(command[3]);
+		let y2 = parseFloat(command[4]);
+		let x3 = parseFloat(command[5]);
+		let y3 = parseFloat(command[6]);
+		if (isUppercase(type)) {
+			adjustedCommands.push(command);
+			continue;
+		}
+		switch (type) {
+			case "m":
+				adjustedCommands.push(["M", homeX + x, homeY + y]);
+				homeX += x;
+				homeY += y;
+				break;
+			case "l":
+				adjustedCommands.push(["L", homeX + x, homeY + y]);
+				homeX += x;
+				homeY += y;
+				break;
+			case "h":
+				adjustedCommands.push(["L", homeX + x, homeY]);
+				homeX += x;
+				break;
+			case "v":
+				adjustedCommands.push(["L", homeX, homeY + y]);
+				homeY += y;
+				break;
+			case "c":
+				adjustedCommands.push([
+					"C",
+					homeX + x1,
+					homeY + y1,
+					homeX + x2,
+					homeY + y2,
+					homeX + x3,
+					homeY + y3,
+				]);
+				homeX += x3;
+				homeY += y3;
+				break;
+			case "s":
+				adjustedCommands.push([
+					"S",
+					homeX + x1,
+					homeY + y1,
+					homeX + x2,
+					homeY + y2,
+				]);
+				homeX += x2;
+				homeY += y2;
+				break;
+			case "q":
+				adjustedCommands.push([
+					"Q",
+					homeX + x1,
+					homeY + y1,
+					homeX + x2,
+					homeY + y2,
+				]);
+				homeX += x2;
+				homeY += y2;
+				break;
+			case "t":
+				adjustedCommands.push(["T", homeX + x, homeY + y]);
+				homeX += x;
+				homeY += y;
+				break;
+			case "a":
+				adjustedCommands.push([
+					"A",
+					x,
+					y,
+					parseFloat(command[3]),
+					parseFloat(command[4]),
+					parseFloat(command[5]),
+					homeX + parseFloat(command[6]),
+					homeY + parseFloat(command[7]),
+				]);
+				homeX += parseFloat(command[6]);
+				homeY += parseFloat(command[7]);
+				break;
+			case "z":
+				adjustedCommands.push(["Z"]);
+				break;
 		}
 	}
 	return adjustedCommands;
 }
-//imports svg from url
 
+function toDString(commands) {
+	return commands.map((e) => e.join(" ")).join(" ");
+}
+//imports svg from url
+var cur;
 function importSVG(url) {
-	loadSVG("./test.svg").then((e) => {
+	loadSVG(url).then((e) => {
 		var parsed = parseSVG(e);
+		cur = parsed
+		document.documentElement.style.setProperty('--svg1pxWidth', `${cur[0].width / 500}px`);
 		var parse = new SvgParser().parse;
+		console.log(parsed);
+
 		parsed.forEach((e) => {
 			//check if e is a path class
 			if (e instanceof Path) {
 				var parsedPath = parse(e.d);
 				console.log(parsedPath);
 				console.log(convertToAbsolute(parsedPath));
+				console.log(toDString(convertToAbsolute(parsedPath)));
 			}
 		});
 	});
 }
-importSVG("./test.svg");
+importSVG("./scissors.svg");
+
+
+window.addEventListener("resize", () => {
+	//set css variable svg1pxWidth
+	document.documentElement.style.setProperty('--svg1pxWidth', `${cur[0].width / 500}px`);
+})
