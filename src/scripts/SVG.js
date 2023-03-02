@@ -21,15 +21,7 @@ function parseSVG(svg) {
 	var parsed = [];
 	var metadata = new SVGMetadata(svg);
 	parsed.push(metadata);
-	document
-		.getElementById("mainArtboard")
-		.setAttributeNS(null, "width", parsed[0].width || 100);
-	document
-		.getElementById("mainArtboard")
-		.setAttributeNS(null, "height", parsed[0].height || 100);
-	document
-		.getElementById("mainArtboard")
-		.setAttributeNS(null, "viewBox", parsed[0].viewBox);
+	new SvgInterface(parsed[0].width, parsed[0].height, parsed[0].viewBox)
 	for (var i = 0; i < children.length; i++) {
 		var child = children[i];
 		if (child.tagName === "path") {
@@ -77,30 +69,28 @@ class SVGMetadata {
 //class which parses path from dom element
 class Path {
 	constructor(path) {
-		this.path = path;
-		this.d = path.getAttribute("d");
-		this.stroke = path.getAttribute("stroke");
-		this.strokeWidth = path.getAttribute("stroke-width");
-		this.fill = path.getAttribute("fill");
-		this.strokeDasharray = path.getAttribute("stroke-dasharray");
-		this.strokeDashoffset = path.getAttribute("stroke-dashoffset");
-		this.strokeLinecap = path.getAttribute("stroke-linecap");
-		this.strokeLinejoin = path.getAttribute("stroke-linejoin");
-		this.strokeMiterlimit = path.getAttribute("stroke-miterlimit");
-		this.strokeOpacity = path.getAttribute("stroke-opacity");
-		this.fillOpacity = path.getAttribute("fill-opacity");
-		this.opacity = path.getAttribute("opacity");
-		this.transform = path.getAttribute("transform");
-		this.style = path.getAttribute("style");
-		this.id = path.getAttribute("id");
-		this.class = path.getAttribute("class");
-		//add event listener for hover on path
-		this.path.addEventListener("mouseover", (e) => {
-			this.path.classList.add("svgHover");
-		})
-		this.path.addEventListener("mouseout", (e) => {
-			this.path.classList.remove("svgHover");
-		})
+		if(path) {
+			this.path = path;
+			this.d = path.getAttribute("d");
+			this.stroke = path.getAttribute("stroke");
+			this.strokeWidth = path.getAttribute("stroke-width");
+			this.fill = path.getAttribute("fill");
+			this.strokeDasharray = path.getAttribute("stroke-dasharray");
+			this.strokeDashoffset = path.getAttribute("stroke-dashoffset");
+			this.strokeLinecap = path.getAttribute("stroke-linecap");
+			this.strokeLinejoin = path.getAttribute("stroke-linejoin");
+			this.strokeMiterlimit = path.getAttribute("stroke-miterlimit");
+			this.strokeOpacity = path.getAttribute("stroke-opacity");
+			this.fillOpacity = path.getAttribute("fill-opacity");
+			this.opacity = path.getAttribute("opacity");
+			this.transform = path.getAttribute("transform");
+			this.style = path.getAttribute("style");
+			this.id = path.getAttribute("id");
+			this.class = path.getAttribute("class");
+		}else {
+			this.path = document.createElementNS('http://www.w3.org/2000/svg',"path");
+		}
+		this.render()
 	}
 	render() {
 		if (document.getElementById("mainArtboard").contains(this.path)) {
