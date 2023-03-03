@@ -21,7 +21,7 @@ function parseSVG(svg) {
 	var parsed = [];
 	var metadata = new SVGMetadata(svg);
 	parsed.push(metadata);
-	new SvgInterface(parsed[0].width, parsed[0].height, parsed[0].viewBox)
+	new SvgInterface(parsed[0].width, parsed[0].height, parsed[0].viewBox);
 	for (var i = 0; i < children.length; i++) {
 		var child = children[i];
 		if (child.tagName === "path") {
@@ -39,8 +39,7 @@ function parseSVG(svg) {
 		} else if (child.tagName === "polygon") {
 			parsed.push(new Polygon(child));
 		}
-	}
-	parsed.forEach((e) => {
+	}	parsed.forEach((e) => {
 		if (e.render) e.render();
 	});
 	return parsed;
@@ -69,9 +68,11 @@ class SVGMetadata {
 //class which parses path from dom element
 class Path {
 	constructor(path) {
-		if(path) {
+		var parse = new SvgParser().parse;
+		if (path) {
 			this.path = path;
 			this.d = path.getAttribute("d");
+			this.dArray = parse(this.d);
 			this.stroke = path.getAttribute("stroke");
 			this.strokeWidth = path.getAttribute("stroke-width");
 			this.fill = path.getAttribute("fill");
@@ -87,16 +88,80 @@ class Path {
 			this.style = path.getAttribute("style");
 			this.id = path.getAttribute("id");
 			this.class = path.getAttribute("class");
-		}else {
-			this.path = document.createElementNS('http://www.w3.org/2000/svg',"path");
+		} else {
+			this.path = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"path"
+			);
+			this.d = "";
+			this.dArray = [];
+			this.stroke = "none";
+			this.strokeWidth = 0;
+			this.fill = "none";
+			this.strokeDasharray = "none";
+			this.strokeDashoffset = 0;
+			this.strokeLinecap = "butt";
+			this.strokeLinejoin = "miter";
+			this.strokeMiterlimit = 4;
+			this.strokeOpacity = 1;
+			this.fillOpacity = 1;
+			this.opacity = 1;
+			this.transform = "none";
+			this.style = "none";
+			this.id = "";
+			this.class = "";
+			
+			this.path.setAttributeNS(null, "d", this.d);
+			this.path.setAttributeNS(null, "stroke", this.stroke);
+			this.path.setAttributeNS(null, "stroke-width", this.strokeWidth);
+			this.path.setAttributeNS(null, "fill", this.fill);
+			this.path.setAttributeNS(null, "stroke-dasharray", this.strokeDasharray);
+			this.path.setAttributeNS(null, "stroke-dashoffset", this.strokeDashoffset);
+			this.path.setAttributeNS(null, "stroke-linecap", this.strokeLinecap);
+			this.path.setAttributeNS(null, "stroke-linejoin", this.strokeLinejoin);
+			this.path.setAttributeNS(null, "stroke-miterlimit", this.strokeMiterlimit);
+			this.path.setAttributeNS(null, "stroke-opacity", this.strokeOpacity);
+			this.path.setAttributeNS(null, "fill-opacity", this.fillOpacity);
+			this.path.setAttributeNS(null, "opacity", this.opacity);
+			this.path.setAttributeNS(null, "transform", this.transform);
+			this.path.setAttributeNS(null, "style", this.style);
+				
 		}
-		this.render()
+		this.render();
 	}
 	render() {
 		if (document.getElementById("mainArtboard").contains(this.path)) {
 			document.getElementById("mainArtboard").removeChild(this.path);
 		}
+		//this for some reason causes the for loop to end. why?
 		document.getElementById("mainArtboard").appendChild(this.path);
+	}
+	setStroke(color, width) {
+		this.stroke = color;
+		this.strokeWidth = width;
+		this.path.setAttributeNS(null, "stroke", this.stroke);
+		this.path.setAttributeNS(null, "stroke-width", this.strokeWidth);
+		this.render();
+	}
+	moveTo(x, y) {
+		this.dArray.push(["M", x, y]);
+		this.d = this.dArray
+			.map((item) => {
+				return item.join(" ");
+			})
+			.join(" ");
+		this.path.setAttributeNS(null, "d", this.d);
+		this.render();
+	}
+	lineTo(x, y) {
+		this.dArray.push(["L", x, y]);
+		this.d = this.dArray
+			.map((item) => {
+				return item.join(" ");
+			})
+			.join(" ");
+		this.path.setAttributeNS(null, "d", this.d);
+		this.render();
 	}
 }
 //class which parses circle from dom element
@@ -521,8 +586,11 @@ var cur;
 function importSVG(url) {
 	loadSVG(url).then((e) => {
 		var parsed = parseSVG(e);
-		cur = parsed
-		document.documentElement.style.setProperty('--svg1pxWidth', `${cur[0].width / 500}px`);
+		cur = parsed;
+		document.documentElement.style.setProperty(
+			"--svg1pxWidth",
+			`${cur[0].width / 500}px`
+		);
 		var parse = new SvgParser().parse;
 		console.log(parsed);
 
@@ -539,8 +607,10 @@ function importSVG(url) {
 }
 importSVG("./scissors.svg");
 
-
 window.addEventListener("resize", () => {
 	//set css variable svg1pxWidth
-	document.documentElement.style.setProperty('--svg1pxWidth', `${cur[0].width / 500}px`);
-})
+	document.documentElement.style.setProperty(
+		"--svg1pxWidth",
+		`${cur[0].width / 500}px`
+	);
+});
