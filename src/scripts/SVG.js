@@ -67,15 +67,16 @@ class SVGMetadata {
 }
 
 function genId(length) {
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
+  let result = "";
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
 }
 
 //class which parses path from dom element
@@ -86,7 +87,7 @@ class Path {
       this.path = path;
       this.d = path.getAttribute("d");
       this.dArray = convertToAbsolute(parse(this.d));
-	  this.d = toDString(convertToAbsolute(this.dArray))
+      this.d = toDString(convertToAbsolute(this.dArray));
       this.stroke = path.getAttribute("stroke");
       this.strokeWidth = path.getAttribute("stroke-width");
       this.fill = path.getAttribute("fill");
@@ -110,7 +111,7 @@ class Path {
       this.d = "";
       this.dArray = [];
       this.stroke = "none";
-      this.strokeWidth = 0;
+      this.strokeWidth = 120;
       this.fill = "none";
       this.strokeDasharray = "none";
       this.strokeDashoffset = 0;
@@ -148,6 +149,7 @@ class Path {
       this.path.setAttributeNS(null, "transform", this.transform);
       this.path.setAttributeNS(null, "style", this.style);
     }
+    this.nextAnchorPoint = null
     this.render();
   }
   render() {
@@ -162,20 +164,29 @@ class Path {
     }
     //this for some reason causes the for loop to end. why?
     document.getElementById("mainArtboard").appendChild(this.path);
-	document.getElementById("mainArtboard").querySelectorAll(".anchorpoint-"+this.id).forEach(e=>{
-		e.remove()
-	})
-	document.getElementById("mainArtboard").querySelectorAll(".handlepoint-"+this.id).forEach(e=>{
-		e.remove()
-	})
-	document.getElementById("mainArtboard").querySelectorAll(".previewpath-"+this.id).forEach(e=>{
-		e.remove()
-	})
+    document
+      .getElementById("mainArtboard")
+      .querySelectorAll(".anchorpoint-" + this.id)
+      .forEach((e) => {
+        e.remove();
+      });
+    document
+      .getElementById("mainArtboard")
+      .querySelectorAll(".handlepoint-" + this.id)
+      .forEach((e) => {
+        e.remove();
+      });
+    document
+      .getElementById("mainArtboard")
+      .querySelectorAll(".previewpath-" + this.id)
+      .forEach((e) => {
+        e.remove();
+      });
     this.drawAnchorPoints();
   }
   setStroke(color, width) {
     this.stroke = color;
-    this.strokeWidth = width;
+    this.strokeWidth = width * pixelSize;
     this.path.setAttributeNS(null, "stroke", this.stroke);
     this.path.setAttributeNS(null, "stroke-width", this.strokeWidth);
     this.render();
@@ -198,28 +209,34 @@ class Path {
   }
   drawAnchorPoints() {
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-	path.classList.add("previewpath-"+this.id)
-	path.setAttributeNS(null, "fill","#0000")
-	path.setAttributeNS(null, "stroke","blue")
-	path.setAttributeNS(null, "stroke-width", pixelSize)
-	path.setAttributeNS(null, "d", this.d)
+    path.classList.add("previewpath-" + this.id);
+    path.setAttributeNS(null, "fill", "#0000");
+    path.setAttributeNS(null, "stroke", "blue");
+    path.setAttributeNS(null, "stroke-width", pixelSize);
+    path.setAttributeNS(null, "d", this.d);
 
     document.getElementById("mainArtboard").appendChild(path);
-    this.dArray.forEach((e) => {
+    this.dArray.forEach((e, i) => {
       switch (e[0]) {
         case "M":
+          if(this.nextAnchorPoint) {
+            var x = -(this.nextAnchorPoint[0] - e[1]) + e[1];
+            var y = -(this.nextAnchorPoint[1] - e[2]) + e[2];
+            this.drawHandle(this.nextAnchorPoint[0], this.nextAnchorPoint[1], x, y);
+
+          }
           this.drawPoint(e[1], e[2]);
           break;
 
-		  case "L":
-			this.drawPoint(e[1], e[2]);
-			break;
+        case "L":
+          this.drawPoint(e[1], e[2]);
+          break;
         case "C":
-			var x = -(e[3] - e[5]) + e[5]
-			var y = -(e[4] - e[6]) + e[6]
-			this.drawHandle(e[3], e[4],x , y)
-			this.drawPoint(e[5], e[6]);
-			break;
+          var x = -(e[3] - e[5]) + e[5];
+          var y = -(e[4] - e[6]) + e[6];
+          this.drawHandle(e[3], e[4], x, y);
+          this.drawPoint(e[5], e[6]);
+          break;
 
         default:
           break;
@@ -228,43 +245,42 @@ class Path {
   }
   drawHandle(x1, y1, x2, y2) {
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-	path.classList.add("handlepoint-"+this.id)
-	path.setAttributeNS(null, "stroke","blue")
-	path.setAttributeNS(null, "stroke-width", pixelSize)
-	path.setAttributeNS(null, "d", `M ${x1} ${y1} L ${x2} ${y2}`)
+    path.classList.add("handlepoint-" + this.id);
+    path.setAttributeNS(null, "stroke", "blue");
+    path.setAttributeNS(null, "stroke-width", pixelSize);
+    path.setAttributeNS(null, "d", `M ${x1} ${y1} L ${x2} ${y2}`);
     document.getElementById("mainArtboard").appendChild(path);
 
     var pt1 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-	pt1.classList.add("handlepoint-"+this.id)
+    pt1.classList.add("handlepoint-" + this.id);
     pt1.setAttributeNS(null, "r", pixelSize * 5);
     pt1.setAttributeNS(null, "cx", x1);
     pt1.setAttributeNS(null, "cy", y1);
-	pt1.setAttributeNS(null, "fill", "white")
-	pt1.setAttributeNS(null, "stroke", "blue")
-	pt1.setAttributeNS(null, "stroke-width", pixelSize)
+    pt1.setAttributeNS(null, "fill", "white");
+    pt1.setAttributeNS(null, "stroke", "blue");
+    pt1.setAttributeNS(null, "stroke-width", pixelSize);
     var pt2 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-	pt2.classList.add("handlepoint-"+this.id)
+    pt2.classList.add("handlepoint-" + this.id);
     pt2.setAttributeNS(null, "r", pixelSize * 5);
     pt2.setAttributeNS(null, "cx", x2);
     pt2.setAttributeNS(null, "cy", y2);
-	pt2.setAttributeNS(null, "fill", "white")
-	pt2.setAttributeNS(null, "stroke", "blue")
-	pt2.setAttributeNS(null, "stroke-width", pixelSize)
+    pt2.setAttributeNS(null, "fill", "white");
+    pt2.setAttributeNS(null, "stroke", "blue");
+    pt2.setAttributeNS(null, "stroke-width", pixelSize);
     document.getElementById("mainArtboard").appendChild(pt1);
     document.getElementById("mainArtboard").appendChild(pt2);
-
   }
   drawPoint(x, y) {
     var pt = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-	pt.classList.add("anchorpoint-"+this.id)
+    pt.classList.add("anchorpoint-" + this.id);
     pt.setAttributeNS(null, "r", pixelSize * 5);
     pt.setAttributeNS(null, "cx", x);
     pt.setAttributeNS(null, "cy", y);
-	pt.setAttributeNS(null, "fill", "blue")
+    pt.setAttributeNS(null, "fill", "blue");
     document.getElementById("mainArtboard").appendChild(pt);
   }
 }
-var pixelSize=0.048
+var pixelSize = 0.048;
 //class which parses circle from dom element
 class Circle {
   constructor(circle) {
@@ -692,6 +708,7 @@ function importSVG(url) {
       "--svg1pxWidth",
       `${cur[0].width / 500}px`
     );
+    pixelSize = cur[0].width / 500
     var parse = new SvgParser().parse;
     console.log(parsed);
 
@@ -706,7 +723,7 @@ function importSVG(url) {
     });
   });
 }
-importSVG("./scissors.svg");
+importSVG("./test.svg");
 
 window.addEventListener("resize", () => {
   //set css variable svg1pxWidth
